@@ -1,0 +1,9 @@
+[
+  {
+    "id": "local-dev-site",
+    "name": "Local WordPress Site",
+    "url": "http://localhost/wordpress",
+    "apiKey": "wp_conn_dev_secret_key_12345",
+    "status": "offline"
+  }
+]

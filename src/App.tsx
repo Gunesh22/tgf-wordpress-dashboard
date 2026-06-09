@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
+import devConnections from './dev-connections.json'
+
 
 interface Connection {
   id: string
@@ -262,14 +264,25 @@ function App() {
   // Connections state
   const [connections, setConnections] = useState<Connection[]>(() => {
     const saved = localStorage.getItem('wp_dashboard_connections')
+    let localSaved: Connection[] = []
     if (saved) {
       try {
-        return JSON.parse(saved)
-      } catch (e) {
-        return []
-      }
+        localSaved = JSON.parse(saved)
+      } catch (e) {}
     }
-    return []
+    const merged = [...localSaved]
+    devConnections.forEach((dc) => {
+      if (!merged.some(c => c.id === dc.id || c.url === dc.url)) {
+        merged.push({
+          id: dc.id,
+          name: dc.name,
+          url: dc.url,
+          apiKey: dc.apiKey,
+          status: dc.status as any
+        })
+      }
+    })
+    return merged
   })
   
   const [activeConnectionId, setActiveConnectionId] = useState<string | null>(() => {
@@ -317,6 +330,9 @@ function App() {
   const [editorMode, setEditorMode] = useState<'easy' | 'code'>('easy')
   const [contentTokens, setContentTokens] = useState<ContentToken[]>([])
   const [extractedFields, setExtractedFields] = useState<ExtractedField[]>([])
+  const [visualSearchQuery, setVisualSearchQuery] = useState('')
+  const [visualTypeFilter, setVisualTypeFilter] = useState<string>('all')
+
 
   const handleExtractedFieldChange = (id: string, updatedField: Partial<ExtractedField>) => {
     setExtractedFields(prev => {
@@ -343,6 +359,12 @@ function App() {
   // API logs console
   const [logs, setLogs] = useState<ApiLog[]>([])
   
+  useEffect(() => {
+    if (logs.length > 0) {
+      console.debug('API Log:', logs[0])
+    }
+  }, [logs])
+
   // Connect site modal state
   const [showConnectModal, setShowConnectModal] = useState(false)
   const [newConnName, setNewConnName] = useState('')
@@ -590,6 +612,8 @@ function App() {
     setEditingStatus(post.status)
     setPostSaveSuccess(null)
     setMetaSearch('')
+    setVisualSearchQuery('')
+    setVisualTypeFilter('all')
     
     // Auto-extract structured fields from content
     const parsed = parseContent(post.content)
@@ -1244,103 +1268,170 @@ function App() {
                                 </div>
 
                                 {editorMode === 'easy' ? (
-                                  <div className="visual-fields-editor" style={{
-                                    background: 'rgba(255,255,255,0.01)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '8px',
-                                    padding: '16px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '14px'
-                                  }}>
-                                    {extractedFields.length === 0 ? (
-                                      <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>
-                                        <p style={{ fontSize: '13px', margin: '0 0 6px 0' }}>No structured fields auto-detected in content.</p>
-                                        <button 
-                                          type="button" 
-                                          className="btn-link" 
-                                          style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-                                          onClick={() => setEditorMode('code')}
-                                        >
-                                          Edit in HTML Code Mode
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      extractedFields.map((field) => (
-                                        <div key={field.id} className="form-group" style={{ margin: 0 }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                                            <span style={{ fontSize: '14px' }}>
-                                              {field.type === 'date' && '📅'}
-                                              {field.type === 'price' && '🏷️'}
-                                              {field.type === 'link' && '🔗'}
-                                              {field.type === 'image' && '🖼️'}
-                                              {field.type === 'video' && '🎥'}
-                                              {field.type === 'button' && '👆'}
-                                            </span>
-                                            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                              {field.label}
-                                            </span>
-                                          </div>
-                                          {field.type === 'button' ? (
-                                            <div style={{ display: 'flex', gap: '10px' }}>
-                                              <div style={{ flex: 1 }}>
-                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Button Text</span>
-                                                <input
-                                                  type="text"
-                                                  value={field.buttonText || ''}
-                                                  onChange={(e) => handleExtractedFieldChange(field.id, { buttonText: e.target.value })}
-                                                  style={{
-                                                    width: '100%',
-                                                    padding: '8px 12px',
-                                                    fontSize: '13px',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid var(--border)',
-                                                    background: 'rgba(255,255,255,0.02)',
-                                                    color: 'var(--text-primary)'
-                                                  }}
-                                                  placeholder="Button Text"
-                                                />
-                                              </div>
-                                              <div style={{ flex: 2 }}>
-                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Link URL</span>
-                                                <input
-                                                  type="text"
-                                                  value={field.buttonUrl || ''}
-                                                  onChange={(e) => handleExtractedFieldChange(field.id, { buttonUrl: e.target.value })}
-                                                  style={{
-                                                    width: '100%',
-                                                    padding: '8px 12px',
-                                                    fontSize: '13px',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid var(--border)',
-                                                    background: 'rgba(255,255,255,0.02)',
-                                                    color: 'var(--text-primary)'
-                                                  }}
-                                                  placeholder="https://..."
-                                                />
-                                              </div>
-                                            </div>
-                                          ) : (
-                                            <input
-                                              type="text"
-                                              value={field.value || ''}
-                                              onChange={(e) => handleExtractedFieldChange(field.id, { value: e.target.value })}
-                                              style={{
-                                                width: '100%',
-                                                padding: '8px 12px',
-                                                fontSize: '13px',
-                                                borderRadius: '6px',
-                                                border: '1px solid var(--border)',
-                                                background: 'rgba(255,255,255,0.02)',
-                                                color: 'var(--text-primary)'
-                                              }}
-                                              placeholder={`Enter ${field.label.toLowerCase()}...`}
-                                            />
-                                          )}
+                                  (() => {
+                                    const filtered = extractedFields.filter(field => {
+                                      if (visualTypeFilter !== 'all' && field.type !== visualTypeFilter) {
+                                        return false
+                                      }
+                                      if (visualSearchQuery) {
+                                        const q = visualSearchQuery.toLowerCase()
+                                        const matchesLabel = (field.label || '').toLowerCase().includes(q)
+                                        const matchesValue = (field.value || '').toLowerCase().includes(q)
+                                        const matchesBtnText = (field.buttonText || '').toLowerCase().includes(q)
+                                        const matchesBtnUrl = (field.buttonUrl || '').toLowerCase().includes(q)
+                                        return matchesLabel || matchesValue || matchesBtnText || matchesBtnUrl
+                                      }
+                                      return true
+                                    })
+                                    return (
+                                      <div className="visual-fields-editor" style={{
+                                        background: 'rgba(255,255,255,0.01)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '8px',
+                                        padding: '16px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '14px'
+                                      }}>
+                                        {/* Visual Fields Search and Filter controls */}
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderBottom: '1px solid var(--border)', paddingBottom: '12px', marginBottom: '4px' }}>
+                                          <input 
+                                            type="text" 
+                                            placeholder="Search visual fields..."
+                                            value={visualSearchQuery}
+                                            onChange={(e) => setVisualSearchQuery(e.target.value)}
+                                            style={{ 
+                                              flex: 1, 
+                                              padding: '6px 10px', 
+                                              fontSize: '12px', 
+                                              borderRadius: '6px', 
+                                              border: '1px solid var(--border)', 
+                                              background: 'rgba(255,255,255,0.03)',
+                                              color: 'var(--text-primary)',
+                                              margin: 0
+                                            }}
+                                            aria-label="Search visual fields"
+                                          />
+                                          <select
+                                            value={visualTypeFilter}
+                                            onChange={(e) => setVisualTypeFilter(e.target.value)}
+                                            style={{
+                                              padding: '6px 10px',
+                                              fontSize: '12px',
+                                              borderRadius: '6px',
+                                              border: '1px solid var(--border)',
+                                              background: 'rgba(255,255,255,0.03)',
+                                              color: 'var(--text-primary)',
+                                              cursor: 'pointer'
+                                            }}
+                                            aria-label="Filter by type"
+                                          >
+                                            <option value="all">All Types</option>
+                                            <option value="button">Button (👆)</option>
+                                            <option value="link">Link (🔗)</option>
+                                            <option value="price">Price (🏷️)</option>
+                                            <option value="date">Date (📅)</option>
+                                            <option value="image">Image (🖼️)</option>
+                                            <option value="video">Video (🎥)</option>
+                                            <option value="general_text">Text (📝)</option>
+                                          </select>
                                         </div>
-                                      ))
-                                    )}
-                                  </div>
+
+                                        {extractedFields.length === 0 ? (
+                                          <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>
+                                            <p style={{ fontSize: '13px', margin: '0 0 6px 0' }}>No structured fields auto-detected in content.</p>
+                                            <button 
+                                              type="button" 
+                                              className="btn-link" 
+                                              style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                                              onClick={() => setEditorMode('code')}
+                                            >
+                                              Edit in HTML Code Mode
+                                            </button>
+                                          </div>
+                                        ) : filtered.length === 0 ? (
+                                          <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>
+                                            <p style={{ fontSize: '13px', margin: '0' }}>No matching fields found.</p>
+                                          </div>
+                                        ) : (
+                                          filtered.map((field) => (
+                                            <div key={field.id} className="form-group" style={{ margin: 0 }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                                                <span style={{ fontSize: '14px' }}>
+                                                  {field.type === 'date' && '📅'}
+                                                  {field.type === 'price' && '🏷️'}
+                                                  {field.type === 'link' && '🔗'}
+                                                  {field.type === 'image' && '🖼️'}
+                                                  {field.type === 'video' && '🎥'}
+                                                  {field.type === 'button' && '👆'}
+                                                  {field.type === 'general_text' && '📝'}
+                                                </span>
+                                                <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                                  {field.label}
+                                                </span>
+                                              </div>
+                                              {field.type === 'button' ? (
+                                                <div style={{ display: 'flex', gap: '10px' }}>
+                                                  <div style={{ flex: 1 }}>
+                                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Button Text</span>
+                                                    <input
+                                                      type="text"
+                                                      value={field.buttonText || ''}
+                                                      onChange={(e) => handleExtractedFieldChange(field.id, { buttonText: e.target.value })}
+                                                      style={{
+                                                        width: '100%',
+                                                        padding: '8px 12px',
+                                                        fontSize: '13px',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid var(--border)',
+                                                        background: 'rgba(255,255,255,0.02)',
+                                                        color: 'var(--text-primary)'
+                                                      }}
+                                                      placeholder="Button Text"
+                                                    />
+                                                  </div>
+                                                  <div style={{ flex: 2 }}>
+                                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Link URL</span>
+                                                    <input
+                                                      type="text"
+                                                      value={field.buttonUrl || ''}
+                                                      onChange={(e) => handleExtractedFieldChange(field.id, { buttonUrl: e.target.value })}
+                                                      style={{
+                                                        width: '100%',
+                                                        padding: '8px 12px',
+                                                        fontSize: '13px',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid var(--border)',
+                                                        background: 'rgba(255,255,255,0.02)',
+                                                        color: 'var(--text-primary)'
+                                                      }}
+                                                      placeholder="https://..."
+                                                    />
+                                                  </div>
+                                                </div>
+                                              ) : (
+                                                <input
+                                                  type="text"
+                                                  value={field.value || ''}
+                                                  onChange={(e) => handleExtractedFieldChange(field.id, { value: e.target.value })}
+                                                  style={{
+                                                    width: '100%',
+                                                    padding: '8px 12px',
+                                                    fontSize: '13px',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid var(--border)',
+                                                    background: 'rgba(255,255,255,0.02)',
+                                                    color: 'var(--text-primary)'
+                                                  }}
+                                                  placeholder={`Enter ${field.label.toLowerCase()}...`}
+                                                />
+                                              )}
+                                            </div>
+                                          ))
+                                        )}
+                                      </div>
+                                    )
+                                  })()
                                 ) : (
                                   <textarea 
                                     id="edit-post-content"
