@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WordPress Multi-Site Dashboard Client</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0f17;
+            --card-bg: rgba(22, 28, 45, 0.6);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #7c3aed;
+            --accent-glow: rgba(124, 58, 237, 0.3);
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --sidebar-width: 280px;
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(124, 58, 237, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 40%);
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: rgba(15, 22, 42, 0.9);
+            border-right: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            backdrop-filter: blur(12px);
+            z-index: 10;
+        }
+
+        .logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a78bfa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .site-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .site-item {
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .site-item:hover, .site-item.active {
+            background: rgba(124, 58, 237, 0.1);
+            border-color: rgba(124, 58, 237, 0.3);
+        }
+
+        .site-item.active {
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .site-name {
+            font-weight: 500;
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .site-url-sub {
+            font-size: 11px;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .delete-site-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .site-item:hover .delete-site-btn {
+            opacity: 1;
+        }
+
+        .delete-site-btn:hover {
+            color: var(--error-color);
+        }
+
+        .add-site-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            box-shadow: 0 4px 12px var(--accent-glow);
+            margin-top: 16px;
+        }
+
+        .add-site-btn:hover {
+            background: #8b5cf6;
+            transform: translateY(-2px);
+        }
+
+        /* Main Viewport */
+        .main-content {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Forms & Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 32px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-color), #34d399);
+        }
+
+        .card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Input Controls */
+        .form-group {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        input, select, textarea {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: all var(--transition-speed);
+            width: 100%;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* Grid Layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        /* Badges & Info List */
+        .info-item {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+        }
+
+        .info-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .info-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Posts Section */
+        .post-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .post-title {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .badge {
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--success-color); }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .badge-info { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+
+        .meta-container {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--card-border);
+        }
+
+        .meta-tag {
+            display: inline-flex;
+            flex-direction: column;
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid rgba(124, 58, 237, 0.2);
+            border-radius: 6px;
+            padding: 6px 12px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .meta-key {
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .meta-val {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Modal Overlay */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(13, 15, 23, 0.85);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal.open {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            border: 1px solid var(--card-border);
+            width: 500px;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+
+        /* Primary Action Buttons */
+        .btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-danger {
+            background: var(--error-color);
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-weight: 500;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success { background: var(--success-color); }
+        .toast-error { background: var(--error-color); }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 15, 23, 0.75);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 5;
+            backdrop-filter: blur(4px);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--card-border);
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar with Site Lists -->
+    <div class="sidebar">
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#logo-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 17L12 22L22 17" stroke="url(#logo-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12L12 17L22 12" stroke="url(#logo-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <defs>
+                    <linearGradient id="logo-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#a78bfa"/>
+                        <stop offset="1" stop-color="#34d399"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            WP Central
+        </div>
+        <div class="section-title">Connected Sites</div>
+        <ul class="site-list" id="siteList">
+            <!-- Dynamically populated -->
+        </ul>
+        <button class="add-site-btn" onclick="openAddSiteModal()">+ Add WordPress Site</button>
+    </div>
+
+    <!-- Main View Area -->
+    <div class="main-content">
+        
+        <!-- Dashboard Empty State -->
+        <div id="emptyState" class="card" style="text-align: center; padding: 60px;">
+            <h2>No Sites Selected</h2>
+            <p style="color: var(--text-secondary); margin-top: 12px; margin-bottom: 24px;">Please connect a WordPress site running the Central Dashboard Connector plugin to start managing content and settings.</p>
+            <button class="btn" onclick="openAddSiteModal()">Connect Your First Site</button>
+        </div>
+
+        <!-- Dashboard Working State -->
+        <div id="dashboardContainer" style="display: none; display: flex; flex-direction: column; gap: 24px; flex-grow: 1;">
+            
+            <div class="card" id="siteInfoCard">
+                <div class="loading-overlay" id="infoLoader"><div class="loading-spinner"></div></div>
+                <div class="card-title">
+                    <span id="activeSiteName">Site Name</span>
+                    <span id="activeSiteUrlText" style="font-size: 14px; font-weight: normal; color: var(--text-secondary);"></span>
+                </div>
+                
+                <div class="grid-3" id="siteMetaGrid">
+                    <div class="info-item">
+                        <div class="info-label">WordPress Version</div>
+                        <div class="info-value" id="wpVersion">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">PHP Version</div>
+                        <div class="info-value" id="phpVersion">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Active Plugins</div>
+                        <div class="info-value" id="pluginsCount">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <!-- Editable Settings Option -->
+                <div class="card" id="settingsCard">
+                    <div class="loading-overlay" id="settingsLoader"><div class="loading-spinner"></div></div>
+                    <div class="card-title">Site Configuration</div>
+                    <form id="settingsForm" onsubmit="updateSettings(event)">
+                        <!-- Dynamically populated options from WordPress metadata detection -->
+                        <div id="dynamicSettingsFields"></div>
+                        <button type="submit" class="btn" style="margin-top: 12px;">Save Configurations</button>
+                    </form>
+                </div>
+
+                <!-- Custom Fields / Post Types -->
+                <div class="card" id="postsCard">
+                    <div class="loading-overlay" id="postsLoader"><div class="loading-spinner"></div></div>
+                    <div class="card-title">
+                        <span>Posts & Custom Fields</span>
+                        <select id="postTypeSelect" style="width: auto; padding: 6px 12px;" onchange="fetchPosts()">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div id="postsList" style="max-height: 400px; overflow-y: auto; padding-right: 8px;">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Add Site Modal -->
+    <div class="modal" id="addSiteModal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 24px; font-family: 'Outfit';">Add New WordPress Site</h2>
+            <form id="addSiteForm" onsubmit="addSite(event)">
+                <div class="form-group">
+                    <label for="modal_site_name">Friendly Site Name</label>
+                    <input type="text" id="modal_site_name" required placeholder="e.g., My Blog">
+                </div>
+                <div class="form-group">
+                    <label for="modal_site_url">WordPress Site URL</label>
+                    <input type="url" id="modal_site_url" required placeholder="https://mywebsite.com">
+                </div>
+                <div class="form-group">
+                    <label for="modal_api_key">Secret API Key</label>
+                    <input type="text" id="modal_api_key" required placeholder="wp_conn_...">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddSiteModal()">Cancel</button>
+                    <button type="submit" class="btn">Connect Site</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Post Modal -->
+    <div class="modal" id="editPostModal">
+        <div class="modal-content" style="width: 650px; max-width: 90%; max-height: 90vh; overflow-y: auto;">
+            <h2 style="margin-bottom: 24px; font-family: 'Outfit';">Edit Content & Fields</h2>
+            <form id="editPostForm" onsubmit="savePost(event)">
+                <input type="hidden" id="edit_post_id">
+                <div class="form-group">
+                    <label for="edit_post_title">Title</label>
+                    <input type="text" id="edit_post_title" required>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="edit_post_status">Status</label>
+                        <select id="edit_post_status">
+                            <option value="publish">Published</option>
+                            <option value="draft">Draft</option>
+                            <option value="pending">Pending Review</option>
+                            <option value="private">Private</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_post_slug">Slug (URL)</label>
+                        <input type="text" id="edit_post_slug" disabled style="opacity: 0.6; cursor: not-allowed;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="edit_post_content">Content</label>
+                    <textarea id="edit_post_content" rows="6" style="resize: vertical;"></textarea>
+                </div>
+                
+                <!-- Dynamic Meta Fields -->
+                <div id="editPostMetaContainer" style="margin-top: 20px; border-top: 1px solid var(--card-border); padding-top: 20px;">
+                    <h3 style="font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Auto-Detected Custom Fields</h3>
+                    <div id="dynamicMetaFields"></div>
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditPostModal()">Cancel</button>
+                    <button type="submit" class="btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast" id="toast">Site Connected successfully</div>
+
+    <script>
+        let sites = [];
+        let activeSiteId = null;
+        let currentPosts = [];
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSitesFromStorage();
+            renderSiteList();
+            if (sites.length > 0) {
+                selectSite(sites[0].id);
+            } else {
+                updateViewStates();
+            }
+        });
+
+        function loadSitesFromStorage() {
+            const stored = localStorage.getItem('wp_dashboard_sites');
+            if (stored) {
+                try {
+                    sites = JSON.parse(stored);
+                } catch (e) {
+                    sites = [];
+                }
+            }
+        }
+
+        function saveSitesToStorage() {
+            localStorage.setItem('wp_dashboard_sites', JSON.stringify(sites));
+        }
+
+        function renderSiteList() {
+            const list = document.getElementById('siteList');
+            list.innerHTML = '';
+            
+            sites.forEach(site => {
+                const li = document.createElement('li');
+                li.className = `site-item ${site.id === activeSiteId ? 'active' : ''}`;
+                li.onclick = () => selectSite(site.id);
+
+                li.innerHTML = `
+                    <div style="overflow:hidden; flex-grow: 1;">
+                        <div class="site-name">${site.name}</div>
+                        <div class="site-url-sub">${site.url}</div>
+                    </div>
+                    <button class="delete-site-btn" onclick="deleteSite(event, '${site.id}')">&times;</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function updateViewStates() {
+            const emptyState = document.getElementById('emptyState');
+            const dashboardContainer = document.getElementById('dashboardContainer');
+
+            if (activeSiteId) {
+                emptyState.style.display = 'none';
+                dashboardContainer.style.display = 'flex';
+            } else {
+                emptyState.style.display = 'block';
+                dashboardContainer.style.display = 'none';
+            }
+        }
+
+        // Modal Controls
+        function openAddSiteModal() {
+            document.getElementById('addSiteModal').classList.add('open');
+        }
+
+        function closeAddSiteModal() {
+            document.getElementById('addSiteModal').classList.remove('open');
+            document.getElementById('addSiteForm').reset();
+        }
+
+        // Add Site
+        function addSite(e) {
+            e.preventDefault();
+            const name = document.getElementById('modal_site_name').value.trim();
+            let url = document.getElementById('modal_site_url').value.trim();
+            const key = document.getElementById('modal_api_key').value.trim();
+
+            // Strip trailing slash
+            if (url.endsWith('/')) {
+                url = url.slice(0, -1);
+            }
+
+            const newSite = {
+                id: 'site_' + Date.now(),
+                name,
+                url,
+                key
+            };
+
+            // Test connection first
+            showToast('Testing connection...', 'info');
+            fetch(`${url}/wp-json/wp-dashboard-connector/v1/site-info`, {
+                headers: {
+                    'X-WP-Connector-Key': key
+                }
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Authentication failed / Site unreachable');
+                return res.json();
+            })
+            .then(data => {
+                sites.push(newSite);
+                saveSitesToStorage();
+                renderSiteList();
+                closeAddSiteModal();
+                selectSite(newSite.id);
+                showToast('Successfully connected to WordPress!', 'success');
+            })
+            .catch(err => {
+                showToast(err.message, 'error');
+            });
+        }
+
+        // Delete Site
+        function deleteSite(e, id) {
+            e.stopPropagation();
+            if (!confirm('Are you sure you want to remove this site connection?')) return;
+
+            sites = sites.filter(s => s.id !== id);
+            saveSitesToStorage();
+            renderSiteList();
+
+            if (activeSiteId === id) {
+                activeSiteId = sites.length > 0 ? sites[0].id : null;
+            }
+
+            selectSite(activeSiteId);
+        }
+
+        // Select Site
+        function selectSite(id) {
+            activeSiteId = id;
+            renderSiteList();
+            updateViewStates();
+
+            if (activeSiteId) {
+                const site = sites.find(s => s.id === activeSiteId);
+                document.getElementById('activeSiteName').innerText = site.name;
+                document.getElementById('activeSiteUrlText').innerText = site.url;
+                fetchSiteData();
+            }
+        }
+
+        // Fetch Main Details
+        function fetchSiteData() {
+            const site = sites.find(s => s.id === activeSiteId);
+            if (!site) return;
+
+            document.getElementById('infoLoader').style.display = 'flex';
+            document.getElementById('settingsLoader').style.display = 'flex';
+
+            const url = `${site.url}/wp-json/wp-dashboard-connector/v1/site-info`;
+            let resStatus = 0;
+            let resText = '';
+
+            fetch(url, {
+                headers: {
+                    'X-WP-Connector-Key': site.key
+                }
+            })
+            .then(res => {
+                resStatus = res.status;
+                return res.text();
+            })
+            .then(text => {
+                resText = text;
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch(e) {
+                    throw new Error(`Failed to parse response as JSON. Raw: "${text}"`);
+                }
+
+                if (resStatus !== 200) {
+                    throw new Error(data.message || `HTTP ${resStatus}`);
+                }
+
+                document.getElementById('wpVersion').innerText = `WP ${data.wp_version}`;
+                document.getElementById('phpVersion').innerText = `PHP ${data.php_version}`;
+                document.getElementById('pluginsCount').innerText = `${data.plugins.length} Active`;
+
+                // Populate Dynamic Fields
+                const fieldsContainer = document.getElementById('dynamicSettingsFields');
+                fieldsContainer.innerHTML = '';
+
+                data.fields.forEach(field => {
+                    const group = document.createElement('div');
+                    group.className = 'form-group';
+
+                    if (field.type === 'text') {
+                        group.innerHTML = `
+                            <label for="field_${field.key}">${field.label}</label>
+                            <input type="text" id="field_${field.key}" name="${field.key}" value="${field.value}">
+                        `;
+                    } else if (field.type === 'boolean') {
+                        group.innerHTML = `
+                            <label for="field_${field.key}" style="display:flex; align-items:center; gap: 8px; cursor:pointer;">
+                                <input type="checkbox" id="field_${field.key}" name="${field.key}" ${field.value ? 'checked' : ''} style="width: auto; margin: 0;">
+                                ${field.label}
+                            </label>
+                        `;
+                    } else if (field.type === 'select') {
+                        let optionsHtml = '';
+                        field.options.forEach(opt => {
+                            optionsHtml += `<option value="${opt}" ${opt === field.value ? 'selected' : ''}>${opt}</option>`;
+                        });
+                        group.innerHTML = `
+                            <label for="field_${field.key}">${field.label}</label>
+                            <select id="field_${field.key}" name="${field.key}">${optionsHtml}</select>
+                        `;
+                    }
+                    fieldsContainer.appendChild(group);
+                });
+
+                // Populate Post Types selector
+                const postSelect = document.getElementById('postTypeSelect');
+                postSelect.innerHTML = '';
+                data.post_types.forEach(pt => {
+                    const opt = document.createElement('option');
+                    opt.value = pt.slug;
+                    opt.innerText = pt.label;
+                    postSelect.appendChild(opt);
+                });
+
+                // Fetch posts
+                fetchPosts();
+            })
+            .catch(err => {
+                handleFetchError('Site Info', url, err, resText, resStatus);
+                showToast('Failed to load site details', 'error');
+            })
+            .finally(() => {
+                document.getElementById('infoLoader').style.display = 'none';
+                document.getElementById('settingsLoader').style.display = 'none';
+            });
+        }
+
+        // Fetch Posts
+        function fetchPosts() {
+            const site = sites.find(s => s.id === activeSiteId);
+            const postType = document.getElementById('postTypeSelect').value || 'post';
+            
+            document.getElementById('postsLoader').style.display = 'flex';
+
+            const url = `${site.url}/wp-json/wp-dashboard-connector/v1/posts?post_type=${postType}`;
+            let resStatus = 0;
+            let resText = '';
+
+            fetch(url, {
+                headers: {
+                    'X-WP-Connector-Key': site.key
+                }
+            })
+            .then(res => {
+                resStatus = res.status;
+                return res.text();
+            })
+            .then(text => {
+                resText = text;
+                let posts;
+                try {
+                    posts = JSON.parse(text);
+                } catch(e) {
+                    throw new Error(`Failed to parse response as JSON. Raw: "${text}"`);
+                }
+
+                if (resStatus !== 200) {
+                    throw new Error(posts.message || `HTTP ${resStatus}`);
+                }
+
+                currentPosts = posts;
+                const list = document.getElementById('postsList');
+                list.innerHTML = '';
+
+                if (posts.length === 0) {
+                    list.innerHTML = `<p style="color:var(--text-secondary); text-align:center; padding: 20px;">No posts found for this type.</p>`;
+                    return;
+                }
+
+                posts.forEach((post, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'post-card';
+
+                    const date = new Date(post.date).toLocaleDateString();
+                    const badgeClass = post.status === 'publish' ? 'badge-success' : 'badge-warning';
+
+                    // Parse metadata fields
+                    let metaHtml = '';
+                    const metaKeys = Object.keys(post.fields);
+                    if (metaKeys.length > 0) {
+                        metaHtml = `<div class="meta-container"><div style="font-size:10px; font-weight:600; margin-bottom:8px; color:var(--text-secondary)">AUTO-DETECTED FIELDS (POST META)</div>`;
+                        metaKeys.forEach(k => {
+                            let valDisplay = typeof post.fields[k] === 'object' ? JSON.stringify(post.fields[k]) : post.fields[k];
+                            metaHtml += `
+                                <div class="meta-tag">
+                                    <span class="meta-key">${k}</span>
+                                    <span class="meta-val">${valDisplay}</span>
+                                </div>
+                            `;
+                        });
+                        metaHtml += '</div>';
+                    }
+
+                    card.innerHTML = `
+                        <div class="post-header">
+                            <span class="post-title">${post.title}</span>
+                            <div style="display:flex; gap: 8px; align-items:center;">
+                                <span class="badge ${badgeClass}">${post.status}</span>
+                                <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="openEditPostModal(${index})">Edit</button>
+                            </div>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-secondary);">
+                            By ${post.author} on ${date} | Slug: /${post.slug}
+                        </div>
+                        ${metaHtml}
+                    `;
+                    list.appendChild(card);
+                });
+            })
+            .catch(err => {
+                handleFetchError('Posts', url, err, resText, resStatus);
+                showToast('Failed to fetch posts', 'error');
+            })
+            .finally(() => {
+                document.getElementById('postsLoader').style.display = 'none';
+            });
+        }
+
+        // Update settings
+        function updateSettings(e) {
+            e.preventDefault();
+            const site = sites.find(s => s.id === activeSiteId);
+            if (!site) return;
+
+            document.getElementById('settingsLoader').style.display = 'flex';
+
+            const formData = new FormData(document.getElementById('settingsForm'));
+            const payload = {};
+            
+            // Collect form fields including checkbox values
+            document.querySelectorAll('#settingsForm [name]').forEach(input => {
+                if (input.type === 'checkbox') {
+                    payload[input.name] = input.checked;
+                } else {
+                    payload[input.name] = input.value;
+                }
+            });
+
+            fetch(`${site.url}/wp-json/wp-dashboard-connector/v1/update-options`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Connector-Key': site.key
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Settings updated successfully!', 'success');
+                    // Refresh info card to reflect settings update (e.g. site title)
+                    fetchSiteData();
+                } else {
+                    showToast('Failed to update options', 'error');
+                }
+            })
+            .catch(err => {
+                showToast('Error sending update request', 'error');
+            })
+            .finally(() => {
+                document.getElementById('settingsLoader').style.display = 'none';
+            });
+        }
+
+        // Edit Post Modal Functions
+        function openEditPostModal(index) {
+            const post = currentPosts[index];
+            if (!post) return;
+
+            document.getElementById('edit_post_id').value = post.id;
+            document.getElementById('edit_post_title').value = post.title;
+            document.getElementById('edit_post_content').value = post.content;
+            document.getElementById('edit_post_status').value = post.status;
+            document.getElementById('edit_post_slug').value = post.slug;
+
+            // Populate custom fields (meta)
+            const metaContainer = document.getElementById('dynamicMetaFields');
+            metaContainer.innerHTML = '';
+            
+            const metaKeys = Object.keys(post.fields);
+            if (metaKeys.length === 0) {
+                metaContainer.innerHTML = `<p style="color:var(--text-secondary); font-size:12px;">No custom fields detected for this post.</p>`;
+            } else {
+                metaKeys.forEach(k => {
+                    const group = document.createElement('div');
+                    group.className = 'form-group';
+                    let valDisplay = typeof post.fields[k] === 'object' ? JSON.stringify(post.fields[k]) : post.fields[k];
+                    group.innerHTML = `
+                        <label for="meta_${k}">${k}</label>
+                        <input type="text" id="meta_${k}" name="${k}" class="post-meta-input" value="${valDisplay}">
+                    `;
+                    metaContainer.appendChild(group);
+                });
+            }
+
+            document.getElementById('editPostModal').classList.add('open');
+        }
+
+        function closeEditPostModal() {
+            document.getElementById('editPostModal').classList.remove('open');
+            document.getElementById('editPostForm').reset();
+        }
+
+        function savePost(e) {
+            e.preventDefault();
+            const site = sites.find(s => s.id === activeSiteId);
+            if (!site) {
+                console.error("Save Post: No active site found.");
+                alert("Error: No active site found.");
+                return;
+            }
+
+            document.getElementById('postsLoader').style.display = 'flex';
+
+            const id = document.getElementById('edit_post_id').value;
+            const title = document.getElementById('edit_post_title').value;
+            const content = document.getElementById('edit_post_content').value;
+            const status = document.getElementById('edit_post_status').value;
+
+            // Gather custom fields
+            const fields = {};
+            document.querySelectorAll('.post-meta-input').forEach(input => {
+                const key = input.id.replace('meta_', '');
+                fields[key] = input.value;
+            });
+
+            const payload = {
+                id: parseInt(id),
+                title,
+                content,
+                status,
+                fields
+            };
+
+            const endpoint = `${site.url}/wp-json/wp-dashboard-connector/v1/update-post`;
+            console.log(`[DEBUG] Attempting to save post to endpoint: ${endpoint}`);
+            console.log(`[DEBUG] Payload:`, payload);
+
+            let resStatus = 0;
+            let resHeaders = {};
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Connector-Key': site.key
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => {
+                resStatus = res.status;
+                // Capture response headers for debugging
+                res.headers.forEach((val, key) => {
+                    resHeaders[key] = val;
+                });
+                console.log(`[DEBUG] Response Status: ${res.status}`);
+                return res.text();
+            })
+            .then(text => {
+                console.log(`[DEBUG] Response Body Text:`, text);
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch(parseErr) {
+                    throw new Error(`Failed to parse response as JSON. Raw Response: "${text}"`);
+                }
+
+                if (data.success) {
+                    showToast('Post updated successfully!', 'success');
+                    closeEditPostModal();
+                    fetchPosts();
+                } else {
+                    const formattedError = `WordPress API returned an error:
+Status Code: ${resStatus}
+Response JSON: ${JSON.stringify(data, null, 2)}`;
+                    console.error(formattedError);
+                    alert(`Update Failed!\n\nPlease copy this log:\n\n${formattedError}`);
+                    showToast('Failed to update post', 'error');
+                }
+            })
+            .catch(err => {
+                const debugLog = `Request failed:
+Endpoint: ${endpoint}
+Status Code: ${resStatus || 'Network Error / Blocked by CORS'}
+Headers sent: Content-Type, X-WP-Connector-Key
+Payload: ${JSON.stringify(payload, null, 2)}
+Error Details: ${err.message || err}
+Response Headers: ${JSON.stringify(resHeaders, null, 2)}`;
+                
+                console.error('[DEBUG ERROR]', debugLog);
+                alert(`Update Failed!\n\nPlease copy this log to paste:\n\n${debugLog}`);
+                showToast('Error sending post update request', 'error');
+            })
+            .finally(() => {
+                document.getElementById('postsLoader').style.display = 'none';
+            });
+        }
+
+        // Diagnostic Fetch Error Helper
+        function handleFetchError(context, url, err, responseText = '', responseStatus = 0) {
+            const errorMsg = `Fetch Failure in ${context}:
+URL: ${url}
+HTTP Status: ${responseStatus || 'Network/CORS Error'}
+Error Details: ${err.message || err}
+Response Body: ${responseText || '(none)'}`;
+
+            console.error(`[FETCH ERROR] ${context}`, errorMsg);
+            alert(`Failed to load ${context}!\n\nPlease copy this log:\n\n${errorMsg}`);
+        }
+
+        // Toast Messages
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.className = `toast show toast-${type}`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
